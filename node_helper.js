@@ -154,13 +154,16 @@ module.exports = NodeHelper.create({
                     self.sendSocketNotification('USER_PRESENCE', true);
                     if (self.config.powerSaving) {
                         clearTimeout(self.deactivateMonitorTimeout);
-                        self.activateMonitor();
+                        self.activateMonitorTimeout = setTimeout(function () {
+                            self.activateMonitor();
+                        }, self.config.activationDelay * 1000);
                     }
                 } else if (value === valueOff) {
                     self.sendSocketNotification('USER_PRESENCE', false);
                     if (!self.config.powerSaving) {
                         return;
                     }
+                    clearTimeout(self.activateMonitorTimeout);
 
                     self.deactivateMonitorTimeout = setTimeout(function () {
                         self.deactivateMonitor();
