@@ -156,23 +156,22 @@ module.exports = NodeHelper.create({
                     sensorData.shift();
                 }
 
-                console.log(sensorData);
-
                 if (self.config.smoothenSensorData && self.config.smoothenAmountDatapoints !== sensorData.length) {
                     return;
-                } else {
-                    const amountOn = sensorData.filter(x => x === valueOn).length;
-                    const amountOff = Math.abs(sensorData.length - amountOn);
-                    value = amountOn >= amountOff ? valueOn : valueOff;
                 }
 
-                console.log(value);
+                const amountOn = sensorData.filter(x => x === valueOn).length;
+                const amountOff = Math.abs(sensorData.length - amountOn);
+
+                console.log("ON: ", amountOn, "; OFF:", amountOff);
 
                 if (value === valueOn) {
                     self.sendSocketNotification('USER_PRESENCE', true);
                     if (self.config.powerSaving) {
                         clearTimeout(self.deactivateMonitorTimeout);
-                        self.activateMonitor();
+                        if (amountOn >= amountOff) {
+                            self.activateMonitor();
+                        }
                     }
                 } else if (value === valueOff) {
                     self.sendSocketNotification('USER_PRESENCE', false);
