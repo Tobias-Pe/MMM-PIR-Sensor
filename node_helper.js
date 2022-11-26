@@ -10,6 +10,7 @@
 const NodeHelper = require('node_helper');
 const Gpio = require('onoff').Gpio;
 const exec = require('child_process').exec;
+const sensorData = [];
 
 module.exports = NodeHelper.create({
     start: function () {
@@ -150,13 +151,30 @@ module.exports = NodeHelper.create({
 
             // Detected movement
             this.pir.watch(function (err, value) {
-                if (value == valueOn) {
+                sensorData.push(value);
+                if (sensorData.length > this.conf.smoothenAmountDatapoints) {
+                    sensorData.shift();
+                }
+
+                console.log(sensorData);
+
+                if (smoothenSensorData && this.conf.smoothenAmountDatapoints !== sensorData.length) {
+                    return;
+                } else {
+                    const amountOn = sensorData.filter(x => x === valueOn).length;
+                    const amountOff = Math.abs(sensorData.length - amountOn);
+                    value = amountOn >= amountOff ? valueOn : valueOff;
+                }
+
+                console.log(value);
+
+                if (value === valueOn) {
                     self.sendSocketNotification('USER_PRESENCE', true);
                     if (self.config.powerSaving) {
                         clearTimeout(self.deactivateMonitorTimeout);
                         self.activateMonitor();
                     }
-                } else if (value == valueOff) {
+                } else if (value === valueOff) {
                     self.sendSocketNotification('USER_PRESENCE', false);
                     if (!self.config.powerSaving) {
                         return;
