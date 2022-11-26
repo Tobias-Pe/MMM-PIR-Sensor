@@ -171,6 +171,34 @@ module.exports = NodeHelper.create({
                 }
             });
 
+            try
+            {
+                const value = this.pir.readSync();
+                if (value === valueOn) {
+                    self.sendSocketNotification('USER_PRESENCE', true);
+                    if (self.config.powerSaving) {
+                        clearTimeout(self.deactivateMonitorTimeout);
+                        self.activateMonitorTimeout = setTimeout(function () {
+                            self.activateMonitor();
+                        }, self.config.activationDelay * 1000);
+                    }
+                } else if (value === valueOff) {
+                    self.sendSocketNotification('USER_PRESENCE', false);
+                    if (!self.config.powerSaving) {
+                        return;
+                    }
+                    clearTimeout(self.activateMonitorTimeout);
+
+                    self.deactivateMonitorTimeout = setTimeout(function () {
+                        self.deactivateMonitor();
+                    }, self.config.powerSavingDelay * 1000);
+                }
+            }
+            catch(e)
+            {
+                console.log(e);
+            }
+
             this.started = true;
 
             if (this.config.runSimulator) {
