@@ -171,8 +171,7 @@ module.exports = NodeHelper.create({
                 }
             });
 
-            try
-            {
+            try {
                 const value = this.pir.readSync();
                 if (value === valueOn) {
                     self.sendSocketNotification('USER_PRESENCE', true);
@@ -193,9 +192,7 @@ module.exports = NodeHelper.create({
                         self.deactivateMonitor();
                     }, self.config.powerSavingDelay * 1000);
                 }
-            }
-            catch(e)
-            {
+            } catch (e) {
                 console.log(e);
             }
 
