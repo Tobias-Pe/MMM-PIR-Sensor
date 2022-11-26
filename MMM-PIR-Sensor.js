@@ -12,8 +12,6 @@ Module.register('MMM-PIR-Sensor',{
 	defaults: {
 		sensorPin: 22,
 		sensorState: 1,
-        smoothenSensorData: false,
-        smoothenAmountDatapoints: 3,
 		relayPin: false,
 		relayState: 1,
 		alwaysOnPin: false,
