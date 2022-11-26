@@ -78,11 +78,11 @@ module.exports = NodeHelper.create({
             const self = this;
             this.config = payload;
 
-            if (self.config.powerSaving) {
-                self.deactivateMonitorTimeout = setTimeout(function () { // Set the timeout before movement is identified
-                    self.deactivateMonitor();
-                }, self.config.powerSavingDelay * 1000);
-            }
+            // if (self.config.powerSaving) {
+            //     self.deactivateMonitorTimeout = setTimeout(function () { // Set the timeout before movement is identified
+            //         self.deactivateMonitor();
+            //     }, self.config.powerSavingDelay * 1000);
+            // }
 
             // Setup for relay pin
             if (this.config.relayPin) {
