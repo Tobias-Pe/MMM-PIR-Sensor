@@ -17,37 +17,29 @@ module.exports = NodeHelper.create({
     },
 
     activateMonitor: function () {
-        console.log("here0");
         // If always-off is enabled, keep monitor deactivated
         let alwaysOffTrigger = this.alwaysOff && (this.alwaysOff.readSync() === this.config.alwaysOffState)
         if (alwaysOffTrigger) {
-            console.log("here1");
             return;
         }
         // If relays are being used in place of HDMI
         if (this.config.relayPin !== false) {
-            console.log("here2");
             this.relay.writeSync(this.config.relayState);
-        }
-        else if (this.config.relayPin === false) {
-            console.log("here3");
+        } else if (this.config.relayPin === false) {
             // Check if hdmi output is already on
             const self = this;
             exec("DISPLAY=:0 xrandr --output HDMI-1 --auto");
- 	        if (self.config.supportCEC)
-    	            exec("echo 'on 0' | cec-client -s -d 1");
+            if (self.config.supportCEC)
+                exec("echo 'on 0' | cec-client -s -d 1");
         }
-    	if (this.briefHDMIWakeupInterval) {
-
-            console.log("here4");
-    	    clearInterval(this.briefHDMIWakeupInterval);
-    	    clearTimeout(this.briefHDMIWakeupPhase2Timeout);
-    	    this.briefHDMIWakeupInterval = null;
+        if (this.briefHDMIWakeupInterval) {
+            clearInterval(this.briefHDMIWakeupInterval);
+            clearTimeout(this.briefHDMIWakeupPhase2Timeout);
+            this.briefHDMIWakeupInterval = null;
         }
     },
 
     deactivateMonitor: function () {
-        console.log("off");
         // If always-on is enabled, keep monitor activated
         let alwaysOnTrigger = this.alwaysOn && (this.alwaysOn.readSync() === this.config.alwaysOnState)
         let alwaysOffTrigger = this.alwaysOff && (this.alwaysOff.readSync() === this.config.alwaysOffState)
@@ -57,25 +49,24 @@ module.exports = NodeHelper.create({
         // If relays are being used in place of HDMI
         if (this.config.relayPin !== false) {
             this.relay.writeSync((this.config.relayState + 1) % 2);
-        }
-        else if (this.config.relayPin === false) {
-	    if (this.config.supportCEC)
-	        exec("echo 'standby 0' | cec-client -s -d 1");
+        } else if (this.config.relayPin === false) {
+            if (this.config.supportCEC)
+                exec("echo 'standby 0' | cec-client -s -d 1");
             exec("DISPLAY=:0 xrandr --output HDMI-1 --off");
         }
-	if (this.config.preventHDMITimeout > 0 && this.config.preventHDMITimeout < 10) {
+        if (this.config.preventHDMITimeout > 0 && this.config.preventHDMITimeout < 10) {
             const self = this;
-	    self.briefHDMIWakeupInterval = setInterval(function() {
+            self.briefHDMIWakeupInterval = setInterval(function () {
                 self.briefHDMIWakeup();
-        	}, self.config.preventHDMITimeout * 1000 * 60);
-	}
+            }, self.config.preventHDMITimeout * 1000 * 60);
+        }
     },
 
-    briefHDMIWakeup: function() {
+    briefHDMIWakeup: function () {
         const self = this;
         exec("DISPLAY=:0 xrandr --output HDMI-1 --auto");
 
-        self.briefHDMIWakeupPhase2Timeout = setTimeout(function() { // set a short delay for the monitor to sense the input
+        self.briefHDMIWakeupPhase2Timeout = setTimeout(function () { // set a short delay for the monitor to sense the input
             self.briefHDMIWakeupPhase2Timeout = null;
             exec("DISPLAY=:0 xrandr --output HDMI-1 --off");
         }, 1000);
@@ -87,108 +78,106 @@ module.exports = NodeHelper.create({
             const self = this;
             this.config = payload;
 
-	    if (self.config.powerSaving) {
-            self.deactivateMonitorTimeout = setTimeout(function() { // Set the timeout before movement is identified
-                self.deactivateMonitor();
-            }, self.config.powerSavingDelay * 1000);
-        }
-
-        // Setup for relay pin
-        if (this.config.relayPin) {
-            this.relay = new Gpio(this.config.relayPin, 'out');
-            this.relay.writeSync(this.config.relayState);
-            exec("DISPLAY=:0 xrandr --output HDMI-1 --auto");
-	        if (this.config.supportCEC)
-    	            exec("echo 'on o' | cec-client -s -d 1");
-        }
-
-        // Setup for alwaysOn switch
-        if (this.config.alwaysOnPin) {
-            this.alwaysOn = new Gpio(this.config.alwaysOnPin, 'in', 'both');
-            const alwaysOnState = this.config.alwaysOnState
-            this.alwaysOn.watch(function (err, value) {
-                if (value === alwaysOnState) {
-                    self.sendSocketNotification('ALWAYS_ON', true);
-                    self.sendSocketNotification('SHOW_ALERT', {
-                        title: 'Always-On Activated',
-                        message: 'Mirror will not activate power-saving mode',
-                        timer: 4000
-                    });
-                    if (self.config.powerSaving){
-                        clearTimeout(self.deactivateMonitorTimeout);
-                    }
-                } else if (value === (alwaysOnState + 1) % 2) {
-                    self.sendSocketNotification('ALWAYS_ON', false);
-                    self.sendSocketNotification('SHOW_ALERT', {
-                        title: 'Always-On Deactivated',
-                        message: 'Mirror will now use motion sensor to activate',
-                        timer: 4000
-                    });
-                }
-            });
-        }
-
-        // Setup for alwaysOff switch
-        if (this.config.alwaysOffPin) {
-            this.alwaysOff = new Gpio(this.config.alwaysOffPin, 'in', 'both');
-            const alwaysOffState = this.config.alwaysOffState
-            this.alwaysOff.watch(function (err, value) {
-                if (value === alwaysOffState) {
-                    self.sendSocketNotification('ALWAYS_OFF', true);
-                    self.deactivateMonitor();
-                } else if (value === (alwaysOffState + 1) % 2) {
-                    self.sendSocketNotification('ALWAYS_OFF', false);
-                    self.activateMonitor();
-                    if (self.config.powerSaving){
-                        clearTimeout(self.deactivateMonitorTimeout);
-                    }
-                }
-            })
-        }
-	    else {
-            exec("DISPLAY=:0 xrandr --output HDMI-1 --auto", null);  // Mirror could have stopped with HDMI off. Reset at startup
-	        if (this.config.supportCEC)
-    	            exec("echo 'on o' | cec-client -s -d 1");
-	    }
-
-        // Setup for sensor pin
-        this.pir = new Gpio(this.config.sensorPin, 'in', 'both');
-
-        // Setup value which represent on and off
-        const valueOn = this.config.sensorState;
-        const valueOff = (this.config.sensorState + 1) % 2;
-
-        // Detected movement
-        this.pir.watch(function (err, value) {
-            if (value == valueOn) {
-                self.sendSocketNotification('USER_PRESENCE', true);
-                if (self.config.powerSaving){
-                    clearTimeout(self.deactivateMonitorTimeout);
-                    self.activateMonitor();
-                }
-            }
-            else if (value == valueOff) {
-                self.sendSocketNotification('USER_PRESENCE', false);
-                if (!self.config.powerSaving){
-                    return;
-                }
-
-                self.deactivateMonitorTimeout = setTimeout(function() {
+            if (self.config.powerSaving) {
+                self.deactivateMonitorTimeout = setTimeout(function () { // Set the timeout before movement is identified
                     self.deactivateMonitor();
                 }, self.config.powerSavingDelay * 1000);
             }
-        });
 
-        this.started = true;
+            // Setup for relay pin
+            if (this.config.relayPin) {
+                this.relay = new Gpio(this.config.relayPin, 'out');
+                this.relay.writeSync(this.config.relayState);
+                exec("DISPLAY=:0 xrandr --output HDMI-1 --auto");
+                if (this.config.supportCEC)
+                    exec("echo 'on o' | cec-client -s -d 1");
+            }
 
-	    if (this.config.runSimulator) {
-	    	setInterval(function(){
-			self.sendSocketNotification('USER_PRESENCE', true);
-			setTimeout(function() {
-				self.sendSocketNotification('USER_PRESENCE', false);
-			}, 1000);
-		    }, 20000);
-	    }
+            // Setup for alwaysOn switch
+            if (this.config.alwaysOnPin) {
+                this.alwaysOn = new Gpio(this.config.alwaysOnPin, 'in', 'both');
+                const alwaysOnState = this.config.alwaysOnState
+                this.alwaysOn.watch(function (err, value) {
+                    if (value === alwaysOnState) {
+                        self.sendSocketNotification('ALWAYS_ON', true);
+                        self.sendSocketNotification('SHOW_ALERT', {
+                            title: 'Always-On Activated',
+                            message: 'Mirror will not activate power-saving mode',
+                            timer: 4000
+                        });
+                        if (self.config.powerSaving) {
+                            clearTimeout(self.deactivateMonitorTimeout);
+                        }
+                    } else if (value === (alwaysOnState + 1) % 2) {
+                        self.sendSocketNotification('ALWAYS_ON', false);
+                        self.sendSocketNotification('SHOW_ALERT', {
+                            title: 'Always-On Deactivated',
+                            message: 'Mirror will now use motion sensor to activate',
+                            timer: 4000
+                        });
+                    }
+                });
+            }
+
+            // Setup for alwaysOff switch
+            if (this.config.alwaysOffPin) {
+                this.alwaysOff = new Gpio(this.config.alwaysOffPin, 'in', 'both');
+                const alwaysOffState = this.config.alwaysOffState
+                this.alwaysOff.watch(function (err, value) {
+                    if (value === alwaysOffState) {
+                        self.sendSocketNotification('ALWAYS_OFF', true);
+                        self.deactivateMonitor();
+                    } else if (value === (alwaysOffState + 1) % 2) {
+                        self.sendSocketNotification('ALWAYS_OFF', false);
+                        self.activateMonitor();
+                        if (self.config.powerSaving) {
+                            clearTimeout(self.deactivateMonitorTimeout);
+                        }
+                    }
+                })
+            } else {
+                exec("DISPLAY=:0 xrandr --output HDMI-1 --auto", null);  // Mirror could have stopped with HDMI off. Reset at startup
+                if (this.config.supportCEC)
+                    exec("echo 'on o' | cec-client -s -d 1");
+            }
+
+            // Setup for sensor pin
+            this.pir = new Gpio(this.config.sensorPin, 'in', 'both');
+
+            // Setup value which represent on and off
+            const valueOn = this.config.sensorState;
+            const valueOff = (this.config.sensorState + 1) % 2;
+
+            // Detected movement
+            this.pir.watch(function (err, value) {
+                if (value == valueOn) {
+                    self.sendSocketNotification('USER_PRESENCE', true);
+                    if (self.config.powerSaving) {
+                        clearTimeout(self.deactivateMonitorTimeout);
+                        self.activateMonitor();
+                    }
+                } else if (value == valueOff) {
+                    self.sendSocketNotification('USER_PRESENCE', false);
+                    if (!self.config.powerSaving) {
+                        return;
+                    }
+
+                    self.deactivateMonitorTimeout = setTimeout(function () {
+                        self.deactivateMonitor();
+                    }, self.config.powerSavingDelay * 1000);
+                }
+            });
+
+            this.started = true;
+
+            if (this.config.runSimulator) {
+                setInterval(function () {
+                    self.sendSocketNotification('USER_PRESENCE', true);
+                    setTimeout(function () {
+                        self.sendSocketNotification('USER_PRESENCE', false);
+                    }, 1000);
+                }, 20000);
+            }
         } else if (notification === 'SCREEN_WAKEUP') {
             this.activateMonitor();
         }
