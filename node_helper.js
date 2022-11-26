@@ -152,13 +152,13 @@ module.exports = NodeHelper.create({
             // Detected movement
             this.pir.watch(function (err, value) {
                 sensorData.push(value);
-                if (sensorData.length > this.conf.smoothenAmountDatapoints) {
+                if (sensorData.length > this.config.smoothenAmountDatapoints) {
                     sensorData.shift();
                 }
 
                 console.log(sensorData);
 
-                if (smoothenSensorData && this.conf.smoothenAmountDatapoints !== sensorData.length) {
+                if (smoothenSensorData && this.config.smoothenAmountDatapoints !== sensorData.length) {
                     return;
                 } else {
                     const amountOn = sensorData.filter(x => x === valueOn).length;
