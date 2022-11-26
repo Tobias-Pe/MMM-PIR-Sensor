@@ -158,7 +158,7 @@ module.exports = NodeHelper.create({
 
                 console.log(sensorData);
 
-                if (smoothenSensorData && self.config.smoothenAmountDatapoints !== sensorData.length) {
+                if (self.config.smoothenSensorData && self.config.smoothenAmountDatapoints !== sensorData.length) {
                     return;
                 } else {
                     const amountOn = sensorData.filter(x => x === valueOn).length;
